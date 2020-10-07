@@ -42,16 +42,16 @@ class Block {
             try {
                 // Save in auxiliary variable the current block hash
                 let currentHash = self.hash;
-
+                self.hash = null;
                 // Recalculate the hash of the Block
                 let hashOfTheBlock = SHA256(JSON.stringify(self)).toString();
+                self.hash = currentHash
 
                 // Comparing if the hashes changed
-                const hashHasBeenChanged = !(hashOfTheBlock === currentHash)
-
+                const hashHasNotBeenChanged = (hashOfTheBlock === currentHash)
                 // Returning the Block is not valid
                 // Returning the Block is valid
-                resolve(hashHasBeenChanged)
+                resolve(hashHasNotBeenChanged)
             } catch (e) {
                 reject(e)
             }
@@ -77,12 +77,15 @@ class Block {
         const parsedData = JSON.parse(decodedData);
         // Resolve with the data if the object isn't the Genesis block
         return new Promise((resolve, reject) => {
-            if (this.height) {
-                resolve(parsedData)
-            } else {
-                reject('Genesis Block')
+                //Actually if height is 0 it will not resolve since 0 is falsy in javascript
+                //Anyway i am changing as mentioned
+                if (this.height > 0) {
+                    resolve(parsedData)
+                } else {
+                    reject('Genesis Block')
+                }
             }
-        })
+        )
 
 
     }

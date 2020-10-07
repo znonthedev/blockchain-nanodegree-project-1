@@ -70,9 +70,10 @@ class Blockchain {
                 if (block.height) {
                     block.previousBlockHash = self.chain[self.chain.length - 1].hash
                 }
+                // Already assigned all of the block property and then calculating the hash
+                self.height++
                 block.hash = SHA256(JSON.stringify(block)).toString();
                 self.chain.push(block);
-                self.height++
                 resolve(block)
             } catch (e) {
                 reject(e)
@@ -115,22 +116,32 @@ class Blockchain {
     submitStar(address, message, signature, star) {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            try{
+            try {
                 const time = +message.split(':')[1];
                 const currentTime = +(new Date().getTime().toString().slice(0, -3))
-                const differenceInTime = time - currentTime;
+                const differenceInTime = (currentTime - time) * 1000;
                 const fiveMinutesInMilliSeconds = 5 * 60 * 1000;
+                // I think the check sign is correct but i made mistake in calculating the difference in time
                 if (differenceInTime < fiveMinutesInMilliSeconds) {
-                    if (bitcoinMessage.verify("starRegistry", address, signature)) {
+                    if (bitcoinMessage.verify(message, address, signature)) {
                         let block = new BlockClass.Block({star: star, "owner": address});
-                        self._addBlock(block).then(r => resolve(r)).catch(reason => reject(reason));
+                        // Is using await is a must ?.
+                        // I am  already using then catch to handle the returned promise
+                        // self._addBlock(block).then(r => resolve(r)).catch(reason => reject(reason));
+                        try {
+                            const addedBlock = await self._addBlock(block);
+                            resolve(addedBlock);
+                        } catch (e) {
+                            reject(e)
+                        }
                     } else {
                         resolve('Not verified')
                     }
                 } else {
                     resolve('Time elapsed is not less than 5 minute ')
                 }
-            }catch (e) {
+            } catch (e) {
+                console.log(e)
                 resolve("Unexpected error")
             }
         });
@@ -205,13 +216,20 @@ class Blockchain {
         let self = this;
         let errorLog = [];
         return new Promise(async (resolve, reject) => {
-            self.chain.forEach(block => {
-                block.validate().then(value => {
-                    if (!value) {
-                        errorLog.push("Modified")
-                    }
-                }).catch(reason => reject(reason));
-            })
+            for (let block of self.chain) {
+                // Already implemented using then catch, but changing to await as requested
+                // block.validate().then(value => {
+                //     if (!value) {
+                //         errorLog.push("Modified")
+                //     }
+                // }).catch(reason => reject(reason));
+                try {
+                    await block.validate();
+                } catch (e) {
+                    errorLog.push("Modified")
+                }
+
+            }
             resolve(errorLog)
         });
     }
